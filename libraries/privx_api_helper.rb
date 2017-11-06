@@ -10,9 +10,8 @@ require 'json'
 
 module PrivX
   class ApiClient
-    def initialize(ext_id, ext_secret, client_id, client_secret, api_base,
+    def initialize(ext_secret, client_id, client_secret, api_base,
                    ca_file_name)
-      @ext_id = ext_id
       @ext_secret = ext_secret
       @client_id = client_id
       @client_secret = client_secret
@@ -43,7 +42,7 @@ module PrivX
       http = self.get_http_client uri
       request = Net::HTTP::Post.new(uri,
         'Content-Type' => 'application/x-www-form-urlencoded')
-      request.basic_auth @ext_id, @ext_secret
+      request.basic_auth "privx-external", @ext_secret
 
       response = http.request request
       if response.code != '200'
