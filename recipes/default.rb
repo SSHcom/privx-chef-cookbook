@@ -122,11 +122,14 @@ ruby_block "Register with host keys" do
     present = filenames.select { |filename| ::File.exists? filename }
     hostkeys = present.map { |filename| ::File.read(filename).chomp }
 
+    service_address = node['ec2']['network_interfaces_macs']['public_hostname']
+
     args = {
       "external_id" => "#{node['ec2']['instance_id']}",
       "ssh_host_public_keys" => hostkeys,
       "roles" => node['privx']['roles'],
-      "distinguished_name" => node['name']
+      "privx_configured" => "TRUSTED_CA",
+      "services" => [{"service" => "SSH", "address" => service_address}]
     }
 
     response = api_client.call("POST",
