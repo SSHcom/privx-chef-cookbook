@@ -83,4 +83,21 @@ module PrivX
       raise "Method not implemented"
     end
   end
+
+  def self.canonicalize_roles(roles)
+    canonical = ""
+
+    roles_by_id = roles.sort { |a, b| a['id'] <=> b['id'] }
+    roles_by_id.each do |role|
+      canonical += "#{role['id']}:"
+
+      sorted_principals = role['principals'].sort
+      sorted_principals.each_with_index do |principal, i|
+        canonical += "#{principal}"
+        canonical += i + 1 == sorted_principals.length && ";" || ","
+      end
+    end
+
+    return canonical
+  end
 end

@@ -25,6 +25,7 @@ chef_gem 'chef-vault' do
 end
 
 require 'chef-vault'
+require 'base64'
 
 vault = ChefVault::Item.load("privx", "privx")
 
@@ -49,9 +50,8 @@ ruby_block "Get PrivX CA pub key" do
 end
 
 # install openssh
-unless ::File.exists?(lock_file_name)
-  include_recipe 'openssh'
-end
+include_recipe 'openssh'
+
 
 ruby_block "Resolve role IDs" do
   block do
@@ -68,14 +68,17 @@ ruby_block "Resolve role IDs" do
 
     roles.each do |role|
       role_id = role_ids.detect { |r| r['name'] == role['name'] }
+      if role_id == nil
+        raise "Role with name #{role['name']} not found."
+      end
+
       role['id'] = role_id['id']
     end
 
     node.override['privx']['roles'] = roles
   end
-
-  not_if { ::File.exists?(lock_file_name) }
 end
+
 
 ruby_block 'Add AuthorizedPrincipalsFile to sshd config' do
   block do
@@ -86,6 +89,29 @@ ruby_block 'Add AuthorizedPrincipalsFile to sshd config' do
     file.write_file
   end
 end
+
+
+include_recipe 'openssl'
+
+ruby_block "Sign roles" do
+  block do
+    Chef::Resource::RubyBlock.send(:include, Chef::Mixin::ShellOut)
+
+    canonical_roles = PrivX::canonicalize_roles(node['privx']['roles'])
+
+    ::File.open('/tmp/privx_roles', "w") { |file| file.write(canonical_roles) }
+
+    command = 'openssl dgst -sha256 -sign /etc/ssh/ssh_host_rsa_key < /tmp/privx_roles'
+    command_out = shell_out(command)
+
+    signature = Base64.strict_encode64(command_out.stdout)
+
+    node.override['privx']['role_signature'] = signature
+
+    Chef::Log.info("Role signature: #{node['privx']['role_signature']}")
+  end
+end
+
 
 directory auth_principals_dir do
   action :create
@@ -114,6 +140,7 @@ ruby_block "Write principals" do
   end
 end
 
+
 ruby_block "Register with host keys" do
   block do
     path = '/etc/ssh/'
@@ -128,6 +155,7 @@ ruby_block "Register with host keys" do
       "external_id" => "#{node['ec2']['instance_id']}",
       "ssh_host_public_keys" => hostkeys,
       "roles" => node['privx']['roles'],
+      "role_signature" => node['privx']['role_signature'],
       "privx_configured" => "TRUSTED_CA",
       "services" => [{"service" => "SSH", "address" => service_address}]
     }
