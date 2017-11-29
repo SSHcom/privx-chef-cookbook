@@ -91,28 +91,6 @@ ruby_block 'Add AuthorizedPrincipalsFile to sshd config' do
 end
 
 
-include_recipe 'openssl'
-
-ruby_block "Sign roles" do
-  block do
-    Chef::Resource::RubyBlock.send(:include, Chef::Mixin::ShellOut)
-
-    canonical_roles = PrivX::canonicalize_roles(node['privx']['roles'])
-
-    ::File.open('/tmp/privx_roles', "w") { |file| file.write(canonical_roles) }
-
-    command = 'openssl dgst -sha256 -sign /etc/ssh/ssh_host_rsa_key < /tmp/privx_roles'
-    command_out = shell_out(command)
-
-    signature = Base64.strict_encode64(command_out.stdout)
-
-    node.override['privx']['role_signature'] = signature
-
-    Chef::Log.info("Role signature: #{node['privx']['role_signature']}")
-  end
-end
-
-
 directory auth_principals_dir do
   action :create
 end
@@ -155,7 +133,6 @@ ruby_block "Register with host keys" do
       "external_id" => "#{node['ec2']['instance_id']}",
       "ssh_host_public_keys" => hostkeys,
       "roles" => node['privx']['roles'],
-      "role_signature" => node['privx']['role_signature'],
       "privx_configured" => "TRUSTED_CA",
       "services" => [{"service" => "SSH", "address" => service_address}]
     }
