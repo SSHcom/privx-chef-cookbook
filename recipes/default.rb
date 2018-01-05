@@ -8,8 +8,6 @@ lock_file_name = '/opt/privx/registered'
 ca_file_name = '/opt/privx/api_ca.crt'
 auth_principals_dir = "/etc/ssh/auth_principals"
 
-Chef::Recipe.send(:include, PrivX)
-
 directory '/opt/privx' do
   action :create
 end
@@ -28,6 +26,8 @@ require 'chef-vault'
 require 'base64'
 
 vault = ChefVault::Item.load("privx", "privx")
+
+Chef::Recipe.send(:include, PrivX)
 
 api_client = PrivX::ApiClient.new(vault['oauth_client_secret'],
   vault['api_client_id'], vault['api_client_secret'],
@@ -55,27 +55,40 @@ include_recipe 'openssh'
 
 ruby_block "Resolve role IDs" do
   block do
-    roles = JSON.parse(node['privx']['roles'].to_json) # deep copy
-    args = roles.map { |role| role['name'] }
+    principals = JSON.parse(node['privx']['principals'].to_json) # deep copy
 
-    response = api_client.call("POST", "/role-store/api/v1/roles/resolve", args)
+    roles = []
+    for principal in principals do
+      for role in principal['roles'] do
+        roles.push(role['name'])
+      end
+    end
+
+    response = api_client.call("POST", "/role-store/api/v1/roles/resolve",
+                               roles)
     if response.code != '200'
       raise "Could not resolve role IDs"
     end
 
     parsed = JSON.parse(response.body)
-    role_ids = parsed['items']
-
-    roles.each do |role|
-      role_id = role_ids.detect { |r| r['name'] == role['name'] }
-      if role_id == nil
-        raise "Role with name #{role['name']} not found."
-      end
-
-      role['id'] = role_id['id']
+    roles = parsed['items']
+    role_ids = Hash.new
+    for role in roles do
+      role_ids[role['name']] = role['id']
     end
 
-    node.override['privx']['roles'] = roles
+    principals.each do |principal|
+      for role in principal['roles'] do
+        role_id = role_ids[role['name']]
+        if role_id == nil
+          raise "Role with name #{role['name']} not found."
+        end
+
+        role['id'] = role_id
+      end
+    end
+
+    node.override['privx']['principals'] = principals
   end
 end
 
@@ -97,23 +110,22 @@ end
 
 ruby_block "Write principals" do
   block do
-    roles = node['privx']['roles']
+    principals = node['privx']['principals']
 
-    roles.each do |role|
-      id = role['id']
-
-      line = "#{id} \# #{role['name']}"
-
-      role['principals'].each do |principal|
-        filename = "#{auth_principals_dir}/#{principal}"
-        if !(::File.exists? filename)
-          ::File.open(filename, "w") {}
-        end
-
-        file = Chef::Util::FileEdit.new(filename)
-        file.insert_line_if_no_match(/#{line}/, line)
-        file.write_file
+    principals.each do |principal|
+      filename = "#{auth_principals_dir}/#{principal['principal']}"
+      if !(::File.exists? filename)
+        ::File.open(filename, "w") {}
       end
+
+      file = Chef::Util::FileEdit.new(filename)
+
+      for role in principal['roles'] do 
+        line = "#{role['id']} \# #{role['name']}"
+        file.insert_line_if_no_match(/#{line}/, line)
+      end
+
+      file.write_file
     end
   end
 end
@@ -126,13 +138,17 @@ ruby_block "Register with host keys" do
     filenames = keytypes.map { |t| "#{path}ssh_host_#{t}_key.pub" }
     present = filenames.select { |filename| ::File.exists? filename }
     hostkeys = present.map { |filename| ::File.read(filename).chomp }
+    hostkeys_json = hostkeys.map { |hostkey| {"key" => hostkey} }
 
-    service_address = node['ec2']['network_interfaces_macs']['public_hostname']
+    service_address = ""
+    node['ec2']['network_interfaces_macs'].each do |mac_addr, iface|
+      service_address = iface['public_hostname']
+    end
 
     args = {
       "external_id" => "#{node['ec2']['instance_id']}",
-      "ssh_host_public_keys" => hostkeys,
-      "roles" => node['privx']['roles'],
+      "ssh_host_public_keys" => hostkeys_json,
+      "principals" => node['privx']['principals'],
       "privx_configured" => "TRUSTED_CA",
       "services" => [{"service" => "SSH", "address" => service_address}]
     }
