@@ -9,27 +9,19 @@ Required attributes under node['privx']:
 
 * `'api_endpoint'`: `https://` prefixed hostname for PrivX.
 * `'api_ca_cert'`: Trust anchor for PrivX's TLS certificate.
-* `'roles'`: JSON array of objects which have key `'name'` (str) and `'principals'` (array).
+* `'roles'`: JSON array of objects which have key `'principal'` (str) and `'roles'` (array).
 
 
 ```json
 {
     "api_endpoint": "https://privx.example.com",
     "api_ca_cert": "-----BEGIN CERTIFICATE-----\nasdfsfdgsfglöjksdfglökjsdg\n-----END CERTIFICATE-----",
-    "roles": [
-    {
-        "name": "root-everywhere",
-        "principals": [
-        "root"
-        ]
-    },
-    {
-        "name": "prod-admin",
-        "principals": [
-        "root"
-        ]
-    }
-    ]
+    "principals": [
+        {
+          "principal": "root",
+          "roles": [{"name": "root-everywhere"}, {"name": "dev-admin"}]
+        }
+      ]
 }
 ```
 
