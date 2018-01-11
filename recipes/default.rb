@@ -140,13 +140,23 @@ ruby_block "Register with host keys" do
     hostkeys = present.map { |filename| ::File.read(filename).chomp }
     hostkeys_json = hostkeys.map { |hostkey| {"key" => hostkey} }
 
+    instance_id = ""
     service_address = ""
-    node['ec2']['network_interfaces_macs'].each do |mac_addr, iface|
-      service_address = iface['public_hostname']
+    if node['ec2'] != nil
+      node['ec2']['network_interfaces_macs'].each do |mac_addr, iface|
+        service_address = iface['public_hostname']
+      end
+
+      instance_id = node['ec2']['instance_id']
+    elsif node['openstack'] != nil
+      instance_id = node['openstack']['instance_id']
+      service_address = node['openstack']['public_ipv4']
+    else
+      raise "Neither EC2 nor OpenStack attributes found"
     end
 
     args = {
-      "external_id" => "#{node['ec2']['instance_id']}",
+      "external_id" => instance_id,
       "ssh_host_public_keys" => hostkeys_json,
       "principals" => node['privx']['principals'],
       "privx_configured" => "TRUSTED_CA",
