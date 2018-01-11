@@ -52,3 +52,5 @@ knife bootstrap ec2-18-194-178-70.eu-central-1.compute.amazonaws.com \
                 --run-list 'role[system]' \
                 --bootstrap-vault-item 'privx:privx'
 ```
+
+Optionally `--hint openstack` might be needed for OpenStack instances.
