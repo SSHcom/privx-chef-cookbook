@@ -45,7 +45,8 @@ ruby_block "Get PrivX CA pub key" do
     ca_list = JSON.parse(response.body)
     pubkey = ca_list[0]['public_key_string']
 
-    node.override['openssh']['ca_keys'] = [pubkey]
+    node.normal['openssh']['ca_keys'] = [pubkey]
+    node.force_override['openssh']['ca_keys'] = [pubkey]
   end
 end
 
@@ -55,7 +56,7 @@ include_recipe 'openssh'
 
 ruby_block "Resolve role IDs" do
   block do
-    principals = JSON.parse(node['privx']['principals'].to_json) # deep copy
+    principals = node['privx']['principals'].dup # deep copy
 
     roles = []
     for principal in principals do
@@ -78,7 +79,7 @@ ruby_block "Resolve role IDs" do
     end
 
     principals.each do |principal|
-      for role in principal['roles'] do
+      principal['roles'].each do |role|
         role_id = role_ids[role['name']]
         if role_id == nil
           raise "Role with name #{role['name']} not found."
@@ -88,7 +89,8 @@ ruby_block "Resolve role IDs" do
       end
     end
 
-    node.override['privx']['principals'] = principals
+    node.normal['privx']['principals'] = principals
+    node.force_override['privx']['principals'] = principals
   end
 end
 
