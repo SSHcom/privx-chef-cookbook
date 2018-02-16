@@ -15,7 +15,7 @@ Required attributes under node['privx']:
 ```json
 {
     "api_endpoint": "https://privx.example.com",
-    "api_ca_cert": "-----BEGIN CERTIFICATE-----\nasdfsfdgsfglöjksdfglökjsdg\n-----END CERTIFICATE-----",
+    "api_ca_cert": "-----BEGIN CERTIFICATE-----\nYXNkZmFzZGZhc2Zhc2Zhc2RmYXNkZmFzZGY=\n-----END CERTIFICATE-----",
     "principals": [
         {
           "principal": "root",
@@ -36,7 +36,7 @@ PrivX cookbook expects to find vault with name `privx` and an databag with name
 
 Such as
 
-`knife vault update privx privx '{"oauth_client_secret": "asdfkjhsfdgxbuhxcvb", "api_client_id": "deploy-script", "api_client_secret": "0000000000000"}' --mode client`
+`knife vault create privx privx '{"oauth_client_secret": "ZGdoZGZ0aGRmZ2hkZ2hibmN2", "api_client_id": "deploy-script", "api_client_secret": "0000000000000"}' --mode client`
 
 This vault needs to be exposed to the node at bootstrap with `--bootstrap-vault-item 'privx:privx'`
 
@@ -53,4 +53,4 @@ knife bootstrap ec2-18-194-178-70.eu-central-1.compute.amazonaws.com \
                 --bootstrap-vault-item 'privx:privx'
 ```
 
-Optionally `--hint openstack` might be needed for OpenStack instances.
+With Openstack nodes `--hint openstack` is probably required.
