@@ -6,6 +6,12 @@ description 'Installs/Configures PrivX Host'
 long_description 'Installs/Configures PrivX Host'
 version '0.1.0'
 chef_version '>= 12.1' if respond_to?(:chef_version)
+source_url 'https://github.com/SSHcom/privx-chef-cookbook'
+issues_url 'https://github.com/SSHcom/privx-chef-cookbook/issues'
+
+supports 'ubuntu', '>= 14.04'
+supports 'centos'
+supports 'redhat'
 
 depends 'openssh'
 depends 'ntp'
