@@ -4,7 +4,7 @@ maintainer_email 'jukka-pekka.virtanen@ssh.com'
 license 'All Rights Reserved'
 description 'Installs/Configures PrivX Host'
 long_description 'Installs/Configures PrivX Host'
-version '0.2.0'
+version '0.2.1'
 chef_version '>= 12.1' if respond_to?(:chef_version)
 source_url 'https://github.com/SSHcom/privx-chef-cookbook'
 issues_url 'https://github.com/SSHcom/privx-chef-cookbook/issues'
