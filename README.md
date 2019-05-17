@@ -30,13 +30,15 @@ Required attributes under node['privx']:
 PrivX cookbook expects to find vault with name `privx` and an databag with name
 `privx` which has following fields:
 
-* `'oauth_client_secret'`: This value is get from PrivX command line using the command: `sudo /opt/privx/bin/keyvault-tool -name privx_auth_client_secret_privx-external get-passphrase`
-* `'api_client_id'`: Name of the API user
+* `'oauth_client_secret'`: OAuth client secret
+* `'api_client_id'`: ID of the API user
 * `'api_client_secret'`: Password for the API user
 
-Such as
+These values can be found from Settings -> Deployment -> Deploy and configure SSH target hosts -> Configure using a deployment script.
 
-`knife vault create privx privx '{"oauth_client_secret": "ZGdoZGZ0aGRmZ2hkZ2hibmN2", "api_client_id": "deploy-script", "api_client_secret": "0000000000000"}' --mode client`
+Add the credentials to chef vault:
+
+`knife vault create privx privx '{"oauth_client_secret": "ZGdoZGZ0aGRmZ2hkZ2hibmN2", "api_client_id": "02781968-2a83-4cc2-4790-5f64cab9020c", "api_client_secret": "eRsiGFQJgMw1aKL4JjbBNyDOTsNHJc2zYPLGGgNH+ak="}' --mode client`
 
 This vault needs to be exposed to the node at bootstrap with `--bootstrap-vault-item 'privx:privx'`
 
