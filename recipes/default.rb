@@ -6,7 +6,8 @@
 
 lock_file_name = '/opt/privx/registered'
 ca_file_name = '/opt/privx/api_ca.crt'
-auth_principals_dir = "/etc/ssh/auth_principals"
+auth_principals_dir = '/etc/ssh/auth_principals'
+principals_command_name = '/etc/ssh/principals_command.sh'
 
 directory '/opt/privx' do
   action :create
@@ -94,13 +95,45 @@ ruby_block "Resolve role IDs" do
   end
 end
 
+ruby_block "Get principals command" do
+  block do
+    response = api_client.call("GET",
+      "/authorizer/api/v1/deploy/principals_command.sh", nil)
+    if response.code != '200'
+      raise "Could not get principals command"
+    end
+
+    principals_command = response.body
+    ::File.open(principals_command_name, "w") do |f|
+      f.puts(principals_command)
+    end
+
+    ::File.chmod(0755, principals_command_name)
+  end
+end
+
 
 ruby_block 'Add AuthorizedPrincipalsFile to sshd config' do
   block do
-    line = "AuthorizedPrincipalsFile #{auth_principals_dir}/%u"
+    delete_lines = [
+      "AuthorizedPrincipalsFile #{auth_principals_dir}/%u"
+    ]
+
+    add_lines = [
+      "AuthorizedPrincipalsCommand /etc/ssh/principals_command.sh %u",
+      "AuthorizedPrincipalsCommandUser \"nobody\""
+    ]
 
     file = Chef::Util::FileEdit.new('/etc/ssh/sshd_config')
-    file.insert_line_if_no_match(/#{line}/, line)
+
+    for line in delete_lines do
+      file.search_file_delete(/#{line}/)
+    end
+
+    for line in add_lines do
+      file.insert_line_if_no_match(/#{line}/, line)
+    end
+
     file.write_file
   end
 end
